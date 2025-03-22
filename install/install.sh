@@ -6,6 +6,16 @@ normal=$(tput sgr0)
 red=$(tput setaf 1)
 green=$(tput setaf 2)
 
+# Parse command line arguments
+INTERACTIVE=false
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        --interactive) INTERACTIVE=true ;;
+        *) echo "Unknown parameter: $1"; exit 1 ;;
+    esac
+    shift
+done
+
 SOURCE=${BASH_SOURCE[0]}
 while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink
   DIR=$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )
@@ -189,19 +199,25 @@ ask_for_reboot() {
   echo_header "[•] After your Pi is rebooted, you can access the web UI by going to $(echo_blue "'$hostname.local'") or $(echo_blue "'$ip_address'") in your browser."
   echo_header "[•] If you encounter any issues or have suggestions, please submit them here: https://github.com/fatihak/InkyPi/issues"
 
-  read -p "Would you like to restart your Raspberry Pi now? [Y/N] " userInput
-  userInput="${userInput^^}"
+  if [ "$INTERACTIVE" = true ]; then
+    read -p "Would you like to restart your Raspberry Pi now? [Y/N] " userInput
+    userInput="${userInput^^}"
 
-  if [[ "${userInput,,}" == "y" ]]; then
-    echo_success "You entered 'Y', rebooting now..."
+    if [[ "${userInput,,}" == "y" ]]; then
+      echo_success "You entered 'Y', rebooting now..."
+      sleep 2
+      sudo reboot now
+    elif [[ "${userInput,,}" == "n" ]]; then
+      echo "Please restart your Raspberry Pi later to apply changes by running 'sudo reboot now'."
+      exit
+    else
+      echo "Unknown input, please restart your Raspberry Pi later to apply changes by running 'sudo reboot now'."
+      sleep 1
+    fi
+  else
+    echo_success "Rebooting now..."
     sleep 2
     sudo reboot now
-  elif [[ "${userInput,,}" == "n" ]]; then
-    echo "Please restart your Raspberry Pi later to apply changes by running 'sudo reboot now'."
-    exit
-  else
-    echo "Unknown input, please restart your Raspberry Pi later to apply changes by running 'sudo reboot now'."
-    sleep 1
   fi
 }
 
