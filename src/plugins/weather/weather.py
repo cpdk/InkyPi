@@ -51,40 +51,45 @@ class Weather(BasePlugin):
         if not lat or not long:
             raise RuntimeError("Latitude and Longitude are required.")
         
+        location_name = settings.get('locationName')
+        if not location_name:
+            location_data = self.get_location(api_key, lat, long)
+            location_name = f"{location_data.get('name')}, {location_data.get('state', location_data.get('country'))}"
+
         units = settings.get('units')
         if not units or units not in ['metric', 'imperial', 'standard']:
             raise RuntimeError("Units are required.")
 
         weather_data = self.get_weather_data(api_key, units, lat, long)
         aqi_data = self.get_air_quality(api_key, lat, long)
-        location_data = self.get_location(api_key, lat, long)
-
+        
         dimensions = device_config.get_resolution()
         if device_config.get_config("orientation") == "vertical":
             dimensions = dimensions[::-1]
 
         timezone = device_config.get_config("timezone", default="America/New_York")
         tz = pytz.timezone(timezone)
-        template_params = self.parse_weather_data(weather_data, aqi_data, location_data, tz, units)
+        template_params = self.parse_weather_data(weather_data, aqi_data, location_name, tz, units)
 
         template_params["plugin_settings"] = settings
 
         image = self.render_image(dimensions, "weather.html", "weather.css", template_params)
         return image
     
-    def parse_weather_data(self, weather_data, aqi_data, location_data, tz, units):
+    def parse_weather_data(self, weather_data, aqi_data, location_name, tz, units):
         current = weather_data.get("current")
         dt = datetime.fromtimestamp(current.get('dt'), tz=timezone.utc).astimezone(tz)
         current_icon = current.get("weather")[0].get("icon").replace("n", "d")
-        location_str = f"{location_data.get('name')}, {location_data.get('state', location_data.get('country'))}"
+        location_str = location_name
         data = {
-            "current_date": dt.strftime("%A, %B %d"),
+            "current_date": dt.strftime("%A, %B %d %Y"),
             "location": location_str,
             "current_day_icon": self.get_plugin_dir(f'icons/{current_icon}.png'),
             "current_temperature": str(round(current.get("temp"))),
             "feels_like": str(round(current.get("feels_like"))),
             "temperature_unit": UNITS[units]["temperature"],
-            "units": units
+            "units": units,
+            "updateTime": dt.strftime("%Y-%m-%d %H:%M")
         }
         data['forecast'] = self.parse_forecast(weather_data.get('daily'), tz)
         data['data_points'] = self.parse_data_points(weather_data, aqi_data, tz, units)
