@@ -43,6 +43,15 @@
   line-height: 105%;
 }
 
+
+.last-update {
+  font-size: min(20cqh, 4cqi);
+  text-align: center;
+  align-content: end;
+  width: 100%;
+  line-height: 105%;
+}
+
 .today-container {
   display: flex;
   flex-direction: row;
