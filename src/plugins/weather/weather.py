@@ -79,16 +79,22 @@ class Weather(BasePlugin):
     
     def parse_weather_data(self, weather_data, aqi_data, location_name, tz, units):
         current = weather_data.get("current")
-        logger.info(f"Full weather data: {json.dumps(weather_data, indent=2)}")
+        # logger.info(f"Full weather data: {json.dumps(weather_data, indent=2)}")
         dt = datetime.fromtimestamp(current.get('dt'), tz=timezone.utc).astimezone(tz)
         current_icon = current.get("weather")[0].get("icon").replace("n", "d")
         location_str = location_name
+
+        today = weather_data['daily'][0]
+        max_temp = today['temp']['max']
+        summary = today['summary']
+
         data = {
             "current_date": dt.strftime("%A, %B %d %Y"),
             "location": location_str,
             "current_day_icon": self.get_plugin_dir(f'icons/{current_icon}.png'),
             "current_temperature": str(round(current.get("temp"))),
-            "max_temperature": str(round(current.get("max"))),
+            "max_temperature": str(round(max_temp)),
+            "summary": summary,
             "feels_like": str(round(current.get("feels_like"))),
             "temperature_unit": UNITS[units]["temperature"],
             "units": units,
@@ -222,3 +228,5 @@ class Weather(BasePlugin):
             raise RuntimeError("Failed to retrieve location.")
         
         return response.json()[0]
+
+    
