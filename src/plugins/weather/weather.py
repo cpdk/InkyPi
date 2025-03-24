@@ -79,7 +79,7 @@ class Weather(BasePlugin):
     
     def parse_weather_data(self, weather_data, aqi_data, location_name, tz, units):
         current = weather_data.get("current")
-        logger.debug(f"Full weather data: {json.dumps(weather_data, indent=2)}")
+        logger.info(f"Full weather data: {json.dumps(weather_data, indent=2)}")
         dt = datetime.fromtimestamp(current.get('dt'), tz=timezone.utc).astimezone(tz)
         current_icon = current.get("weather")[0].get("icon").replace("n", "d")
         location_str = location_name
