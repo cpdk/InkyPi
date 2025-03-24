@@ -219,11 +219,13 @@ class PlaylistRefresh(RefreshAction):
     Attributes:
         playlist: The playlist object associated with the refresh.
         plugin_instance: The plugin instance to refresh.
+        force_refresh: Whether to force a refresh regardless of the refresh schedule.
     """
 
-    def __init__(self, playlist, plugin_instance):
+    def __init__(self, playlist, plugin_instance, force_refresh=False):
         self.playlist = playlist
         self.plugin_instance = plugin_instance
+        self.force_refresh = force_refresh
 
     def get_refresh_info(self):
         """Return refresh metadata as a dictionary."""
@@ -243,9 +245,9 @@ class PlaylistRefresh(RefreshAction):
         # Determine the file path for the plugin's image
         plugin_image_path = os.path.join(device_config.plugin_image_dir, self.plugin_instance.get_image_path())
 
-        # Check if a refresh is needed based on the plugin instance's criteria
-        if self.plugin_instance.should_refresh(current_dt):
-            logger.info(f"Refreshing plugin instance. | plugin_instance: '{self.plugin_instance.name}'") 
+        # Check if a refresh is needed based on the plugin instance's criteria or if force refresh is requested
+        if self.force_refresh or self.plugin_instance.should_refresh(current_dt):
+            logger.info(f"Refreshing plugin instance. | plugin_instance: '{self.plugin_instance.name}' | force_refresh: {self.force_refresh}") 
             # Generate a new image
             image = plugin.generate_image(self.plugin_instance.settings, device_config)
             image.save(plugin_image_path)

@@ -108,6 +108,7 @@ def display_plugin_instance():
     playlist_name = data.get("playlist_name")
     plugin_id = data.get("plugin_id")
     plugin_instance_name = data.get("plugin_instance")
+    force_refresh = data.get("force_refresh", False)
 
     try:
         playlist = playlist_manager.get_playlist(playlist_name)
@@ -118,7 +119,7 @@ def display_plugin_instance():
         if not plugin_instance:
             return jsonify({"success": False, "message": f"Plugin instance '{plugin_instance_name}' not found"}), 400
 
-        refresh_task.manual_update(PlaylistRefresh(playlist, plugin_instance))
+        refresh_task.manual_update(PlaylistRefresh(playlist, plugin_instance, force_refresh))
     except Exception as e:
         return jsonify({"error": f"An error occurred: {str(e)}"}), 500
 
