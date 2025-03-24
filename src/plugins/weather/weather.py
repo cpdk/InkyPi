@@ -86,6 +86,7 @@ class Weather(BasePlugin):
             "location": location_str,
             "current_day_icon": self.get_plugin_dir(f'icons/{current_icon}.png'),
             "current_temperature": str(round(current.get("temp"))),
+            "max_temperature": str(round(current.get("max"))),
             "feels_like": str(round(current.get("feels_like"))),
             "temperature_unit": UNITS[units]["temperature"],
             "units": units,
