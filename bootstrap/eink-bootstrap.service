@@ -11,7 +11,13 @@ Environment=PYTHONPATH=%h/eink/venv/lib/python3.9/site-packages
 Environment=HOME=%h
 Environment=USER=%i
 Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=DEBUG=1
 WorkingDirectory=%h/eink
+ExecStartPre=/bin/bash -c 'echo "Debug: Service starting for user %i" > /var/log/eink-debug.log'
+ExecStartPre=/bin/bash -c 'echo "Debug: HOME=%h" >> /var/log/eink-debug.log'
+ExecStartPre=/bin/bash -c 'echo "Debug: Current directory: $(pwd)" >> /var/log/eink-debug.log'
+ExecStartPre=/bin/bash -c 'echo "Debug: Script path: %h/eink/bootstrap/bootstrap.sh" >> /var/log/eink-debug.log'
+ExecStartPre=/bin/bash -c 'ls -la %h/eink/bootstrap/bootstrap.sh >> /var/log/eink-debug.log'
 ExecStart=/bin/bash %h/eink/bootstrap/bootstrap.sh %i
 ExecStop=/bin/true
 
