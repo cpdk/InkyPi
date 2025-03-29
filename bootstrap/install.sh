@@ -78,8 +78,9 @@ fi
 
 # Copy service files
 log "Installing systemd services..."
-cp "$INSTALL_DIR/bootstrap/eink-bootstrap.service" /etc/systemd/system/
-cp "$INSTALL_DIR/bootstrap/eink.service" /etc/systemd/system/
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cp "$SCRIPT_DIR/eink-bootstrap.service" /etc/systemd/system/
+cp "$SCRIPT_DIR/eink.service" /etc/systemd/system/
 
 # Update service files with correct paths
 sed -i "s|/opt/eink|$INSTALL_DIR|g" /etc/systemd/system/eink-bootstrap.service
