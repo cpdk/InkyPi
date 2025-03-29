@@ -29,6 +29,16 @@ python3 -m venv /opt/eink/venv
 source /opt/eink/venv/bin/activate
 pip install -r /opt/eink/requirements.txt
 
+# Set permissions (keep user ownership)
+log "Setting permissions..."
+chmod -R 755 /opt/eink
+chmod 644 /opt/eink/requirements.txt
+chmod 644 /opt/eink/main.py
+chmod 644 /opt/eink/bootstrap/*.py
+chmod 644 /opt/eink/bootstrap/*.service
+chmod 644 /opt/eink/bootstrap/wifi.yml.template
+chmod 755 /opt/eink/bootstrap/*.sh
+
 # Install systemd services
 log "Installing systemd services..."
 cp /opt/eink/bootstrap/eink-bootstrap.service /etc/systemd/system/
@@ -48,6 +58,7 @@ systemctl start eink-bootstrap.service
 log "Setting up WiFi configuration..."
 mkdir -p /boot/eink
 cp /opt/eink/bootstrap/wifi.yml.template /boot/eink/wifi.yml
+chmod 644 /boot/eink/wifi.yml
 
 log "Installation complete!"
 log "Please edit /boot/eink/wifi.yml with your WiFi credentials" 
