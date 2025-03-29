@@ -4,7 +4,7 @@
 set -e
 
 # Configuration
-REPO_URL="https://github.com/yourusername/eink-bootstrapper.git"
+REPO_URL="https://github.com/cpdk/InkyPi.git"
 INSTALL_DIR="${1:-$HOME/eink}"  # Use provided directory or default to ~/eink
 VENV_DIR="$INSTALL_DIR/venv"
 SERVICE_USER="$SUDO_USER"  # Use the user who ran sudo
