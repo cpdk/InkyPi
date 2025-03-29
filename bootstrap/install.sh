@@ -4,7 +4,7 @@
 set -e
 
 # Configuration
-INSTALL_DIR="${1:-$HOME/eink}"  # Use provided directory or default to ~/eink
+INSTALL_DIR="/home/$SUDO_USER/eink"  # Always install in user's home directory
 VENV_DIR="$INSTALL_DIR/venv"
 SERVICE_USER="$SUDO_USER"  # Use the user who ran sudo
 
@@ -64,6 +64,9 @@ log "Copying repository files to installation directory..."
 cp -r "$(dirname "$(dirname "${BASH_SOURCE[0]}")")"/* "$INSTALL_DIR/"
 chown -R "$SERVICE_USER:$SERVICE_USER" "$INSTALL_DIR"
 
+# Make bootstrap script executable
+chmod +x "$INSTALL_DIR/bootstrap/bootstrap.sh"
+
 # Set up Python virtual environment
 log "Setting up Python virtual environment..."
 if [ ! -d "$VENV_DIR" ]; then
@@ -89,7 +92,24 @@ if [ ! -f "$SCRIPT_DIR/eink.service" ]; then
     exit 1
 fi
 
-log "Service files found, copying to systemd directory..."
+log "Service files found, cleaning up existing service files..."
+
+# Stop and disable existing services
+systemctl stop eink-bootstrap@$SERVICE_USER.service 2>/dev/null || true
+systemctl stop eink@$SERVICE_USER.service 2>/dev/null || true
+systemctl disable eink-bootstrap@$SERVICE_USER.service 2>/dev/null || true
+systemctl disable eink@$SERVICE_USER.service 2>/dev/null || true
+
+# Remove existing service files
+rm -f /etc/systemd/system/eink-bootstrap.service
+rm -f /etc/systemd/system/eink.service
+rm -f /etc/systemd/system/eink-bootstrap@.service
+rm -f /etc/systemd/system/eink@.service
+
+# Reload systemd to clean up
+systemctl daemon-reload
+
+log "Copying new service files to systemd directory..."
 
 # Copy service files with template names
 cp "$SCRIPT_DIR/eink-bootstrap.service" /etc/systemd/system/eink-bootstrap@.service
@@ -168,21 +188,11 @@ If no internet connection is established:
 For more information, see the template file at ~/eink/bootstrap/wifi.yml.template
 EOF
 
-# Set permissions
-chown -R "$SERVICE_USER:$SERVICE_USER" /boot/eink/README.md
-
 # Start services
 log "Starting services..."
 systemctl start eink-bootstrap@$SERVICE_USER.service
 systemctl start eink@$SERVICE_USER.service
 
 log "Installation complete!"
-log "The system will now:"
-log "1. Check for internet connectivity on boot"
-log "2. Look for wifi.yml in /boot/eink/ for WiFi configuration"
-log "3. Create a hotspot if no internet is available"
-log "4. Start the main application when internet is available"
-log ""
-log "You can check the service status with:"
-log "systemctl status eink-bootstrap@$SERVICE_USER.service"
-log "systemctl status eink@$SERVICE_USER.service" 
+log "The application has been installed in: $INSTALL_DIR"
+log "To configure WiFi, follow the instructions in /boot/eink/README.md" 
