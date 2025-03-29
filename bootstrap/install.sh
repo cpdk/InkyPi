@@ -91,23 +91,23 @@ fi
 
 log "Service files found, copying to systemd directory..."
 
-# Copy service files
-cp "$SCRIPT_DIR/eink-bootstrap.service" /etc/systemd/system/
-cp "$SCRIPT_DIR/eink.service" /etc/systemd/system/
+# Copy service files with template names
+cp "$SCRIPT_DIR/eink-bootstrap.service" /etc/systemd/system/eink-bootstrap@.service
+cp "$SCRIPT_DIR/eink.service" /etc/systemd/system/eink@.service
 
 # Update service files with correct paths
 log "Updating service files with installation directory: $INSTALL_DIR"
-sed -i "s|/opt/eink|$INSTALL_DIR|g" /etc/systemd/system/eink-bootstrap.service
-sed -i "s|/opt/eink|$INSTALL_DIR|g" /etc/systemd/system/eink.service
+sed -i "s|/opt/eink|$INSTALL_DIR|g" /etc/systemd/system/eink-bootstrap@.service
+sed -i "s|/opt/eink|$INSTALL_DIR|g" /etc/systemd/system/eink@.service
 
 # Verify service files were copied
-if [ ! -f "/etc/systemd/system/eink-bootstrap.service" ]; then
-    error "Failed to copy eink-bootstrap.service"
+if [ ! -f "/etc/systemd/system/eink-bootstrap@.service" ]; then
+    error "Failed to copy eink-bootstrap@.service"
     exit 1
 fi
 
-if [ ! -f "/etc/systemd/system/eink.service" ]; then
-    error "Failed to copy eink.service"
+if [ ! -f "/etc/systemd/system/eink@.service" ]; then
+    error "Failed to copy eink@.service"
     exit 1
 fi
 
