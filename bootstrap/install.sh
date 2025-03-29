@@ -63,7 +63,7 @@ chown -R "$SERVICE_USER:$SERVICE_USER" "$INSTALL_DIR"
 # Clone repository if not already present
 if [ ! -d "$INSTALL_DIR/.git" ]; then
     log "Cloning repository..."
-    git clone "$REPO_URL" "$INSTALL_DIR"
+    git clone --depth 1"$REPO_URL" "$INSTALL_DIR"
     chown -R "$SERVICE_USER:$SERVICE_USER" "$INSTALL_DIR"
 fi
 
