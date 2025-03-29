@@ -5,12 +5,14 @@ After=network.target
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-User=%i
-Group=%i
-Environment=PYTHONPATH=%h/eink/venv/lib/python3.9/site-packages
-Environment=HOME=%h
-Environment=USER=%i
-ExecStart=%h/eink/bootstrap/bootstrap.sh
+User=root
+Group=root
+Environment=PYTHONPATH=/home/christian/eink/venv/lib/python3.9/site-packages
+Environment=HOME=/home/christian
+Environment=USER=christian
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+WorkingDirectory=/home/christian/eink
+ExecStart=/bin/bash /home/christian/eink/bootstrap/bootstrap.sh
 ExecStop=/bin/true
 
 [Install]

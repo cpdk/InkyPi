@@ -1,5 +1,14 @@
 #!/bin/bash
 
+# Debug information
+echo "Debug: Script started"
+echo "Debug: Current user: $(whoami)"
+echo "Debug: HOME: $HOME"
+echo "Debug: USER: $USER"
+echo "Debug: Current directory: $(pwd)"
+echo "Debug: Script location: $0"
+echo "Debug: Script directory: $(dirname "$0")"
+
 # Configuration
 LOG_FILE="/var/log/eink-bootstrap.log"
 DISPLAY_SCRIPT="$HOME/eink/bootstrap/display-hotspot.py"
