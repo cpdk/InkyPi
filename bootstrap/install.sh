@@ -14,10 +14,14 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
+# Get the absolute path of the repository
+REPO_DIR="$(cd "$(dirname "$(dirname "${BASH_SOURCE[0]}")")" && pwd)"
+log "Repository directory: $REPO_DIR"
+
 # Create symlink to /opt/eink
 log "Creating symlink to /opt/eink..."
 rm -f /opt/eink
-ln -s "$(pwd)/.." /opt/eink
+ln -s "$REPO_DIR" /opt/eink
 
 # Set up Python virtual environment
 log "Setting up Python virtual environment..."
