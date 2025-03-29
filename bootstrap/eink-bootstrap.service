@@ -7,13 +7,24 @@ Type=oneshot
 RemainAfterExit=yes
 User=root
 Group=root
-Environment=PYTHONPATH=/home/christian/eink/venv/lib/python3.9/site-packages
-Environment=HOME=/home/christian
-Environment=USER=christian
+Environment=PYTHONPATH=%h/eink/venv/lib/python3.9/site-packages
+Environment=HOME=%h
+Environment=USER=%i
 Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-WorkingDirectory=/home/christian/eink
-ExecStart=/bin/bash /home/christian/eink/bootstrap/bootstrap.sh
+WorkingDirectory=%h/eink
+ExecStart=/bin/bash %h/eink/bootstrap/bootstrap.sh %i
 ExecStop=/bin/true
+
+# Security settings
+ProtectSystem=full
+ProtectHome=true
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+SystemCallArchitectures=native
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
 
 [Install]
 WantedBy=multi-user.target 

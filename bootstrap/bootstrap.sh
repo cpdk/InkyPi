@@ -1,10 +1,42 @@
 #!/bin/bash
 
+# Error handling function
+error() {
+    echo "Error: $1" >&2
+    exit 1
+}
+
+# Check if user argument is provided
+if [ -z "$1" ]; then
+    error "User argument is required"
+fi
+
+REAL_USER="$1"
+
+# Validate user exists
+if ! id "$REAL_USER" &>/dev/null; then
+    error "User '$REAL_USER' does not exist"
+fi
+
+# Validate user has a home directory
+if [ ! -d "/home/$REAL_USER" ]; then
+    error "User '$REAL_USER' has no home directory"
+fi
+
+# Validate user has a shell
+USER_SHELL=$(getent passwd "$REAL_USER" | cut -d: -f7)
+if [ ! -x "$USER_SHELL" ]; then
+    error "User '$REAL_USER' has no valid shell"
+fi
+
 # Debug information
 echo "Debug: Script started"
 echo "Debug: Current user: $(whoami)"
 echo "Debug: HOME: $HOME"
 echo "Debug: USER: $USER"
+echo "Debug: REAL_USER: $REAL_USER"
+echo "Debug: User home: /home/$REAL_USER"
+echo "Debug: User shell: $USER_SHELL"
 echo "Debug: Current directory: $(pwd)"
 echo "Debug: Script location: $0"
 echo "Debug: Script directory: $(dirname "$0")"
@@ -19,6 +51,14 @@ INSTALL_DIR="$HOME/eink"
 # Debug information
 log() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
+}
+
+# Ensure proper permissions
+ensure_permissions() {
+    log "Setting up permissions..."
+    chown -R "$REAL_USER:$REAL_USER" "$INSTALL_DIR"
+    chmod -R 755 "$INSTALL_DIR"
+    chmod 644 "$LOG_FILE"
 }
 
 # Check if we have internet connectivity
@@ -144,7 +184,7 @@ EOF
     # Display hotspot information
     if [ -f "$DISPLAY_SCRIPT" ]; then
         log "Displaying hotspot information..."
-        "$VENV_PYTHON" "$DISPLAY_SCRIPT" "$HOTSPOT_NAME" "$HOTSPOT_PASSWORD" "192.168.4.1"
+        sudo -u "$REAL_USER" "$VENV_PYTHON" "$DISPLAY_SCRIPT" "$HOTSPOT_NAME" "$HOTSPOT_PASSWORD" "192.168.4.1"
     fi
     
     log "Hotspot setup complete. SSID: $HOTSPOT_NAME, Password: $HOTSPOT_PASSWORD"
@@ -154,12 +194,15 @@ EOF
 update_application() {
     log "Updating application..."
     cd "$INSTALL_DIR"
-    git pull --depth 1
-    systemctl restart eink@$USER.service
+    sudo -u "$REAL_USER" git pull --depth 1
+    systemctl restart eink@$REAL_USER.service
 }
 
 # Main execution
 log "Starting e-ink bootstrapper"
+
+# Ensure proper permissions
+ensure_permissions
 
 # Check for WiFi configuration file
 if [ -f "$WIFI_CONFIG" ]; then
