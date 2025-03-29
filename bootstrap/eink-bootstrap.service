@@ -1,0 +1,17 @@
+[Unit]
+Description=E-ink Display Bootstrapper
+After=network.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=%i
+Group=%i
+Environment=PYTHONPATH=%h/eink/venv/lib/python3.9/site-packages
+Environment=HOME=%h
+Environment=USER=%i
+ExecStart=%h/eink/bootstrap/bootstrap.sh
+ExecStop=/bin/true
+
+[Install]
+WantedBy=multi-user.target 

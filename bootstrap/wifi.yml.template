@@ -1,0 +1,26 @@
+# WiFi Configuration Template
+# Copy this file to /boot/eink/wifi.yml and modify with your network details
+# Higher priority numbers are tried first
+
+networks:
+  # Primary WiFi network
+  - ssid: "MyWiFi"
+    password: "MyWiFiPassword"
+    priority: 100  # Highest priority
+
+  # Backup WiFi network
+  - ssid: "BackupWiFi"
+    password: "BackupPassword"
+    priority: 50   # Lower priority
+
+  # Guest network (lowest priority)
+  - ssid: "GuestWiFi"
+    password: "GuestPassword"
+    priority: 1    # Lowest priority
+
+# Notes:
+# - The file will be automatically deleted after successful connection
+# - If connection fails, the device will create a hotspot
+# - You can add as many networks as needed
+# - Priority numbers can be any positive integer
+# - Higher priority numbers are tried first 

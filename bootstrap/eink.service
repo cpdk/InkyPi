@@ -1,0 +1,18 @@
+[Unit]
+Description=E-ink Display Application
+After=network.target
+
+[Service]
+Type=simple
+User=%i
+Group=%i
+Environment=PYTHONPATH=%h/eink/venv/lib/python3.9/site-packages
+Environment=HOME=%h
+Environment=USER=%i
+WorkingDirectory=%h/eink
+ExecStart=%h/eink/venv/bin/python main.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target 
