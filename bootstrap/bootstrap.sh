@@ -1,150 +1,142 @@
 #!/bin/bash
 
-# Error handling function
-error() {
-    echo "Error: $1" >&2
-    exit 1
-}
-
-# Check if user argument is provided
-if [ -z "$1" ]; then
-    error "User argument is required"
-fi
-
-REAL_USER="$1"
-
-# Validate user exists
-if ! id "$REAL_USER" &>/dev/null; then
-    error "User '$REAL_USER' does not exist"
-fi
-
-# Validate user has a home directory
-if [ ! -d "/home/$REAL_USER" ]; then
-    error "User '$REAL_USER' has no home directory"
-fi
-
-# Validate user has a shell
-USER_SHELL=$(getent passwd "$REAL_USER" | cut -d: -f7)
-if [ ! -x "$USER_SHELL" ]; then
-    error "User '$REAL_USER' has no valid shell"
-fi
-
-# Debug information
-echo "Debug: Script started"
-echo "Debug: Current user: $(whoami)"
-echo "Debug: HOME: $HOME"
-echo "Debug: USER: $USER"
-echo "Debug: REAL_USER: $REAL_USER"
-echo "Debug: User home: /home/$REAL_USER"
-echo "Debug: User shell: $USER_SHELL"
-echo "Debug: Current directory: $(pwd)"
-echo "Debug: Script location: $0"
-echo "Debug: Script directory: $(dirname "$0")"
+# Exit on error
+set -e
 
 # Configuration
-LOG_FILE="/var/log/eink-bootstrap.log"
-DISPLAY_SCRIPT="$HOME/eink/bootstrap/display-hotspot.py"
-VENV_PYTHON="$HOME/eink/venv/bin/python"
+INSTALL_DIR="/opt/eink"
 WIFI_CONFIG="/boot/eink/wifi.yml"
-INSTALL_DIR="$HOME/eink"
+HOTSPOT_SSID="InkyPi"
+HOTSPOT_PASSWORD="inkypi123"
+LOG_FILE="/var/log/eink-bootstrap.log"
+UPDATE_INTERVAL=3600  # Check for updates every hour
+MAX_RETRIES=3
+RETRY_DELAY=10
 
-# Debug information
+# Log function
 log() {
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
 }
 
-# Ensure proper permissions
-ensure_permissions() {
-    log "Setting up permissions..."
-    chown -R "$REAL_USER:$REAL_USER" "$INSTALL_DIR"
-    chmod -R 755 "$INSTALL_DIR"
-    chmod 644 "$LOG_FILE"
+# Error handling function
+handle_error() {
+    local exit_code=$1
+    local line_no=$2
+    log "Error occurred in line $line_no with exit code $exit_code"
+    log "Stack trace:"
+    caller | while read line; do
+        log "  $line"
+    done
+    return $exit_code
 }
 
-# Check if we have internet connectivity
+# Set up error handling
+trap 'handle_error $? $LINENO' ERR
+
+# Check if running as root
+if [ "$EUID" -ne 0 ]; then 
+    log "Please run as root"
+    exit 1
+fi
+
+# Function to check internet connectivity
 check_internet() {
     log "Checking internet connectivity..."
-    ping -c 1 8.8.8.8 >/dev/null 2>&1
-    if [ $? -eq 0 ]; then
-        log "Internet connection detected"
+    if ping -c 1 8.8.8.8 >/dev/null 2>&1; then
         return 0
-    else
-        log "No internet connection detected"
-        return 1
     fi
-}
-
-# Configure WiFi from yml file
-configure_wifi() {
-    log "Configuring WiFi from $WIFI_CONFIG..."
-    
-    # Check if yml file exists
-    if [ ! -f "$WIFI_CONFIG" ]; then
-        log "No WiFi configuration file found"
-        return 1
-    fi
-    
-    # Install yq if not present
-    if ! command -v yq &> /dev/null; then
-        log "Installing yq..."
-        wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_arm64
-        chmod +x /usr/local/bin/yq
-    fi
-    
-    # Read networks from yml file
-    networks=$(yq e '.networks[]' "$WIFI_CONFIG")
-    
-    # Configure each network
-    while IFS= read -r network; do
-        ssid=$(echo "$network" | yq e '.ssid' -)
-        password=$(echo "$network" | yq e '.password' -)
-        priority=$(echo "$network" | yq e '.priority' -)
-        
-        log "Configuring network: $ssid (priority: $priority)"
-        
-        # Add network to wpa_supplicant.conf
-        cat >> /etc/wpa_supplicant/wpa_supplicant.conf << EOF
-network={
-    ssid="$ssid"
-    psk="$password"
-    priority=$priority
-}
-EOF
-    done <<< "$networks"
-    
-    # Restart networking
-    systemctl restart wpa_supplicant
-    systemctl restart dhcpcd
-    
-    # Wait for connection
-    log "Waiting for WiFi connection..."
-    for i in {1..30}; do
-        if check_internet; then
-            log "Successfully connected to WiFi"
-            # Remove config file
-            rm "$WIFI_CONFIG"
-            return 0
-        fi
-        sleep 2
-    done
-    
-    log "Failed to connect to WiFi"
     return 1
 }
 
-# Configure hotspot
+# Function to update application
+update_application() {
+    log "Checking for application updates..."
+    cd "$INSTALL_DIR"
+    
+    # Get current commit
+    current_commit=$(git rev-parse HEAD)
+    
+    # Fetch and pull updates
+    git fetch origin
+    git pull origin main
+    
+    # Check if we got updates
+    if [ "$current_commit" != "$(git rev-parse HEAD)" ]; then
+        log "Updates found, installing dependencies..."
+        source "$INSTALL_DIR/venv/bin/activate"
+        pip install -r requirements.txt
+        deactivate
+        
+        log "Updates installed, restarting application..."
+        systemctl restart eink.service
+        return 0
+    fi
+    
+    log "No updates available"
+    return 1
+}
+
+# Function to configure WiFi from yml file
+configure_wifi() {
+    log "Configuring WiFi..."
+    if [ ! -f "$WIFI_CONFIG" ]; then
+        log "No WiFi configuration found"
+        return 1
+    fi
+
+    # Read WiFi configuration
+    while IFS= read -r line; do
+        if [[ $line =~ ssid:[[:space:]]*\"([^\"]+)\" ]]; then
+            SSID="${BASH_REMATCH[1]}"
+        elif [[ $line =~ password:[[:space:]]*\"([^\"]+)\" ]]; then
+            PASSWORD="${BASH_REMATCH[1]}"
+        fi
+    done < "$WIFI_CONFIG"
+
+    if [ -z "$SSID" ] || [ -z "$PASSWORD" ]; then
+        log "Invalid WiFi configuration"
+        return 1
+    fi
+
+    # Configure WiFi
+    cat > /etc/wpa_supplicant/wpa_supplicant.conf << EOF
+ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+update_config=1
+country=US
+
+network={
+    ssid="$SSID"
+    psk="$PASSWORD"
+    key_mgmt=WPA-PSK
+}
+EOF
+
+    # Restart networking with retries
+    for i in $(seq 1 $MAX_RETRIES); do
+        log "Attempting to restart networking (attempt $i/$MAX_RETRIES)"
+        systemctl restart networking
+        sleep $RETRY_DELAY
+        
+        if iwgetid -r >/dev/null 2>&1; then
+            log "WiFi configured successfully"
+            rm "$WIFI_CONFIG"
+            return 0
+        fi
+    done
+
+    log "Failed to connect to WiFi after $MAX_RETRIES attempts"
+    return 1
+}
+
+# Function to set up hotspot
 setup_hotspot() {
     log "Setting up WiFi hotspot..."
-    
-    # Generate random 5-digit number for hotspot name
-    HOTSPOT_NAME="eink-hotspot-$(shuf -i 10000-99999 -n 1)"
-    HOTSPOT_PASSWORD="eink-configure"
     
     # Configure hostapd
     cat > /etc/hostapd/hostapd.conf << EOF
 interface=wlan0
 driver=nl80211
-ssid=$HOTSPOT_NAME
+ssid=$HOTSPOT_SSID
 hw_mode=g
 channel=7
 wmm_enabled=0
@@ -164,67 +156,118 @@ interface=wlan0
 dhcp-range=192.168.4.2,192.168.4.20,255.255.255.0,24h
 EOF
 
-    # Configure network interfaces
+    # Configure dhcpcd
     cat > /etc/dhcpcd.conf << EOF
 interface wlan0
     static ip_address=192.168.4.1/24
     nohook wpa_supplicant
 EOF
 
-    # Start services
-    systemctl unmask hostapd
-    systemctl enable hostapd
-    systemctl enable dnsmasq
-    systemctl enable dhcpcd
+    # Restart services with retries
+    for i in $(seq 1 $MAX_RETRIES); do
+        log "Attempting to start hotspot services (attempt $i/$MAX_RETRIES)"
+        systemctl restart hostapd
+        systemctl restart dnsmasq
+        systemctl restart dhcpcd
+        sleep $RETRY_DELAY
+        
+        if iwgetid -r >/dev/null 2>&1; then
+            log "Hotspot started successfully"
+            # Update display with configuration options
+            python3 "$INSTALL_DIR/display-hotspot.py" "$HOTSPOT_SSID" "$HOTSPOT_PASSWORD" "192.168.4.1"
+            return 0
+        fi
+    done
     
-    systemctl restart hostapd
-    systemctl restart dnsmasq
-    systemctl restart dhcpcd
-    
-    # Display hotspot information
-    if [ -f "$DISPLAY_SCRIPT" ]; then
-        log "Displaying hotspot information..."
-        sudo -u "$REAL_USER" "$VENV_PYTHON" "$DISPLAY_SCRIPT" "$HOTSPOT_NAME" "$HOTSPOT_PASSWORD" "192.168.4.1"
-    fi
-    
-    log "Hotspot setup complete. SSID: $HOTSPOT_NAME, Password: $HOTSPOT_PASSWORD"
+    log "Failed to start hotspot after $MAX_RETRIES attempts"
+    return 1
 }
 
-# Update application
-update_application() {
-    log "Updating application..."
-    cd "$INSTALL_DIR"
-    sudo -u "$REAL_USER" git pull --depth 1
-    systemctl restart eink@$REAL_USER.service
+# Function to show configuration display
+show_config_display() {
+    log "Showing configuration display..."
+    python3 "$INSTALL_DIR/display-hotspot.py" "$HOTSPOT_SSID" "$HOTSPOT_PASSWORD" "192.168.4.1"
 }
 
-# Main execution
-log "Starting e-ink bootstrapper"
-
-# Ensure proper permissions
-ensure_permissions
-
-# Check for WiFi configuration file
-if [ -f "$WIFI_CONFIG" ]; then
-    log "Found WiFi configuration file"
-    if configure_wifi; then
-        log "Successfully configured WiFi"
-        update_application
-        exit 0
-    else
-        log "Failed to configure WiFi"
+# Function to verify system health
+verify_system() {
+    log "Verifying system health..."
+    
+    # Check critical services
+    local services=("hostapd" "dnsmasq" "dhcpcd" "networking")
+    for service in "${services[@]}"; do
+        if ! systemctl is-active --quiet "$service"; then
+            log "Service $service is not running, attempting to restart..."
+            systemctl restart "$service"
+            sleep 5
+            if ! systemctl is-active --quiet "$service"; then
+                log "Failed to start $service"
+                return 1
+            fi
+        fi
+    done
+    
+    # Check disk space
+    local disk_space=$(df -h / | awk 'NR==2 {print $5}' | sed 's/%//')
+    if [ "$disk_space" -gt 90 ]; then
+        log "Warning: Disk space is low ($disk_space%)"
     fi
-fi
+    
+    # Check memory
+    local memory_usage=$(free | grep Mem | awk '{print $3/$2 * 100.0}')
+    if (( $(echo "$memory_usage > 90" | bc -l) )); then
+        log "Warning: Memory usage is high ($memory_usage%)"
+    fi
+    
+    return 0
+}
 
-# Check internet connectivity
-if check_internet; then
-    log "Internet connection detected"
-    update_application
+# Main bootstrap process
+log "Starting bootstrap process..."
+
+# Check if this is a manual configuration request
+if [ "$1" = "configure" ]; then
+    log "Manual configuration requested"
+    show_config_display
     exit 0
 fi
 
-# No internet connection, set up hotspot
-log "No internet connection, setting up hotspot"
-setup_hotspot
+# Verify system health
+if ! verify_system; then
+    log "System health check failed"
+    show_config_display
+    exit 1
+fi
 
-log "Bootstrapper completed" 
+# Check for internet connectivity
+if check_internet; then
+    log "Internet connection detected"
+    
+    # Check for updates
+    if update_application; then
+        log "Application updated successfully"
+    fi
+    
+    # Start the application
+    systemctl start eink.service
+    exit 0
+fi
+
+# Try to configure WiFi if configuration exists
+if configure_wifi; then
+    log "WiFi configured successfully"
+    systemctl start eink.service
+    exit 0
+fi
+
+# No internet and no WiFi config, set up hotspot
+log "Setting up WiFi hotspot..."
+if setup_hotspot; then
+    log "Hotspot setup complete"
+else
+    log "Failed to set up hotspot"
+    show_config_display
+    exit 1
+fi
+
+exit 0 

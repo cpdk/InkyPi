@@ -1,18 +1,27 @@
 [Unit]
 Description=E-ink Display Application
-After=network.target
+After=eink-bootstrap.service
 
 [Service]
 Type=simple
-User=%i
-Group=%i
-Environment=PYTHONPATH=%h/eink/venv/lib/python3.9/site-packages
-Environment=HOME=%h
-Environment=USER=%i
-WorkingDirectory=%h/eink
-ExecStart=%h/eink/venv/bin/python main.py
+User=root
+Group=root
+Environment=PYTHONPATH=/opt/eink/venv/lib/python3.9/site-packages
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+WorkingDirectory=/opt/eink
+ExecStart=/opt/eink/venv/bin/python main.py
 Restart=always
 RestartSec=10
+
+# Security settings
+ProtectSystem=full
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+SystemCallArchitectures=native
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
 
 [Install]
 WantedBy=multi-user.target 

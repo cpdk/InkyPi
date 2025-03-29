@@ -7,23 +7,18 @@ Type=oneshot
 RemainAfterExit=yes
 User=root
 Group=root
-Environment=PYTHONPATH=/home/%i/eink/venv/lib/python3.9/site-packages
-Environment=HOME=/home/%i
-Environment=USER=%i
+Environment=PYTHONPATH=/opt/eink/venv/lib/python3.9/site-packages
 Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-Environment=DEBUG=1
-WorkingDirectory=/home/%i/eink
-ExecStartPre=/bin/bash -c 'echo "Debug: Service starting for user %i" > /var/log/eink-debug.log'
-ExecStartPre=/bin/bash -c 'echo "Debug: HOME=/home/%i" >> /var/log/eink-debug.log'
-ExecStartPre=/bin/bash -c 'echo "Debug: Current directory: $(pwd)" >> /var/log/eink-debug.log'
-ExecStartPre=/bin/bash -c 'echo "Debug: Script path: /home/%i/eink/bootstrap/bootstrap.sh" >> /var/log/eink-debug.log'
-ExecStartPre=/bin/bash -c 'ls -la /home/%i/eink/bootstrap/bootstrap.sh >> /var/log/eink-debug.log'
-ExecStart=/bin/bash /home/%i/eink/bootstrap/bootstrap.sh %i
+WorkingDirectory=/opt/eink
+ExecStart=/bin/bash /opt/eink/bootstrap/bootstrap.sh
 ExecStop=/bin/true
+# Run every hour for updates and health checks
+ExecStartPost=/bin/bash -c 'systemd-run --on-calendar="*:0/1" --unit=eink-bootstrap-check.service /bin/bash /opt/eink/bootstrap/bootstrap.sh'
+# Allow manual configuration trigger
+ExecStartPost=/bin/bash -c 'systemctl enable eink-bootstrap-check.service'
 
 # Security settings
 ProtectSystem=full
-ProtectHome=true
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectKernelTunables=true

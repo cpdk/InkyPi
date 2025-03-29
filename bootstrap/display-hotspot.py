@@ -1,77 +1,66 @@
 #!/usr/bin/env python3
 
 from PIL import Image, ImageDraw, ImageFont
-import os
+import inky.auto
 import sys
-from inky.auto import auto
-import time
+import os
 
-def create_hotspot_display(ssid, password, ip):
+def create_config_display(ssid, password, ip):
     # Initialize the display
-    try:
-        display = auto()
-    except Exception as e:
-        print(f"Error initializing display: {e}")
-        return False
-
+    display = inky.auto.auto()
+    
     # Create a new image with white background
     width = display.WIDTH
     height = display.HEIGHT
-    image = Image.new("P", (width, height))
+    image = Image.new("P", (width, height), display.WHITE)
     draw = ImageDraw.Draw(image)
-
-    # Try to load a font, fallback to default if not available
+    
+    # Load font
     try:
-        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 20)
+        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 16)
     except:
         font = ImageFont.load_default()
-
-    # Calculate text positions
-    title = "WiFi Hotspot Active"
-    title_bbox = draw.textbbox((0, 0), title, font=font)
-    title_width = title_bbox[2] - title_bbox[0]
-    title_x = (width - title_width) // 2
-
-    # Draw title
-    draw.text((title_x, 20), title, display.BLACK, font=font)
-
-    # Draw separator line
-    draw.line([(20, 50), (width-20, 50)], display.BLACK, 2)
-
-    # Draw connection details
-    details = [
-        f"SSID: {ssid}",
-        f"Password: {password}",
-        f"IP: {ip}",
-        "",
-        "Connect to configure WiFi"
-    ]
-
-    y_pos = 70
-    for line in details:
-        text_bbox = draw.textbbox((0, 0), line, font=font)
-        text_width = text_bbox[2] - text_bbox[0]
-        x_pos = (width - text_width) // 2
-        draw.text((x_pos, y_pos), line, display.BLACK, font=font)
-        y_pos += 30
-
-    # Display the image
-    try:
-        display.set_image(image)
-        display.show()
-        return True
-    except Exception as e:
-        print(f"Error displaying image: {e}")
-        return False
+    
+    # Title
+    draw.text((10, 10), "InkyPi Configuration", font=font, fill=display.BLACK)
+    
+    # WiFi Hotspot Info
+    y = 40
+    draw.text((10, y), "WiFi Hotspot:", font=font, fill=display.BLACK)
+    y += 25
+    draw.text((20, y), f"SSID: {ssid}", font=font, fill=display.BLACK)
+    y += 25
+    draw.text((20, y), f"Password: {password}", font=font, fill=display.BLACK)
+    y += 25
+    draw.text((20, y), f"IP: {ip}", font=font, fill=display.BLACK)
+    
+    # Configuration Options
+    y += 40
+    draw.text((10, y), "Configuration Options:", font=font, fill=display.BLACK)
+    y += 25
+    draw.text((20, y), "1. Connect to WiFi Hotspot", font=font, fill=display.BLACK)
+    y += 25
+    draw.text((20, y), "2. SSH: ssh pi@192.168.4.1", font=font, fill=display.BLACK)
+    y += 25
+    draw.text((20, y), "3. Edit /boot/eink/wifi.yml", font=font, fill=display.BLACK)
+    
+    # Instructions
+    y += 40
+    draw.text((10, y), "Instructions:", font=font, fill=display.BLACK)
+    y += 25
+    draw.text((20, y), "1. Connect to WiFi hotspot", font=font, fill=display.BLACK)
+    y += 25
+    draw.text((20, y), "2. SSH in or edit wifi.yml", font=font, fill=display.BLACK)
+    y += 25
+    draw.text((20, y), "3. Reboot to apply changes", font=font, fill=display.BLACK)
+    
+    # Update the display
+    display.set_image(image)
+    display.show()
 
 if __name__ == "__main__":
     if len(sys.argv) != 4:
         print("Usage: display-hotspot.py <ssid> <password> <ip>")
         sys.exit(1)
-
-    ssid = sys.argv[1]
-    password = sys.argv[2]
-    ip = sys.argv[3]
-
-    success = create_hotspot_display(ssid, password, ip)
-    sys.exit(0 if success else 1) 
+    
+    create_config_display(sys.argv[1], sys.argv[2], sys.argv[3]) 
