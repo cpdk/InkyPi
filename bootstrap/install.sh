@@ -79,20 +79,57 @@ fi
 # Copy service files
 log "Installing systemd services..."
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+log "Script directory: $SCRIPT_DIR"
+
+# Check if service files exist
+if [ ! -f "$SCRIPT_DIR/eink-bootstrap.service" ]; then
+    error "Service file not found: $SCRIPT_DIR/eink-bootstrap.service"
+    exit 1
+fi
+
+if [ ! -f "$SCRIPT_DIR/eink.service" ]; then
+    error "Service file not found: $SCRIPT_DIR/eink.service"
+    exit 1
+fi
+
+log "Service files found, copying to systemd directory..."
+
+# Copy service files
 cp "$SCRIPT_DIR/eink-bootstrap.service" /etc/systemd/system/
 cp "$SCRIPT_DIR/eink.service" /etc/systemd/system/
 
 # Update service files with correct paths
+log "Updating service files with installation directory: $INSTALL_DIR"
 sed -i "s|/opt/eink|$INSTALL_DIR|g" /etc/systemd/system/eink-bootstrap.service
 sed -i "s|/opt/eink|$INSTALL_DIR|g" /etc/systemd/system/eink.service
 
+# Verify service files were copied
+if [ ! -f "/etc/systemd/system/eink-bootstrap.service" ]; then
+    error "Failed to copy eink-bootstrap.service"
+    exit 1
+fi
+
+if [ ! -f "/etc/systemd/system/eink.service" ]; then
+    error "Failed to copy eink.service"
+    exit 1
+fi
+
+log "Service files copied successfully"
+
 # Reload systemd
+log "Reloading systemd..."
 systemctl daemon-reload
 
 # Enable and start services
-log "Enabling and starting services..."
+log "Enabling and starting services for user: $SERVICE_USER"
+log "Service name: eink-bootstrap@$SERVICE_USER.service"
 systemctl enable eink-bootstrap@$SERVICE_USER.service
 systemctl enable eink@$SERVICE_USER.service
+
+# Verify service status
+log "Verifying service status..."
+systemctl status eink-bootstrap@$SERVICE_USER.service || true
+systemctl status eink@$SERVICE_USER.service || true
 
 # Set up WiFi configuration directory
 log "Setting up WiFi configuration..."
