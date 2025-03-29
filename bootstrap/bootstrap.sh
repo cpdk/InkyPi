@@ -145,7 +145,7 @@ EOF
 update_application() {
     log "Updating application..."
     cd "$INSTALL_DIR"
-    git pull
+    git pull --depth 1
     systemctl restart eink@$USER.service
 }
 
