@@ -60,12 +60,10 @@ log "Creating installation directory..."
 mkdir -p "$INSTALL_DIR"
 chown -R "$SERVICE_USER:$SERVICE_USER" "$INSTALL_DIR"
 
-# Clone repository if not already present
-if [ ! -d "$INSTALL_DIR/.git" ]; then
-    log "Cloning repository..."
-    git clone --depth 1"$REPO_URL" "$INSTALL_DIR"
-    chown -R "$SERVICE_USER:$SERVICE_USER" "$INSTALL_DIR"
-fi
+# Copy repository files to installation directory
+log "Copying repository files to installation directory..."
+cp -r "$(dirname "$(dirname "${BASH_SOURCE[0]}")")"/* "$INSTALL_DIR/"
+chown -R "$SERVICE_USER:$SERVICE_USER" "$INSTALL_DIR"
 
 # Set up Python virtual environment
 log "Setting up Python virtual environment..."
