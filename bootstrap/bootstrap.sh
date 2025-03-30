@@ -114,7 +114,8 @@ EOF
     # Restart networking with retries
     for i in $(seq 1 $MAX_RETRIES); do
         log "Attempting to restart networking (attempt $i/$MAX_RETRIES)"
-        systemctl restart networking
+        systemctl restart wpa_supplicant
+        systemctl restart dhcpcd
         sleep $RETRY_DELAY
         
         if iwgetid -r >/dev/null 2>&1; then
@@ -174,7 +175,7 @@ EOF
         if iwgetid -r >/dev/null 2>&1; then
             log "Hotspot started successfully"
             # Update display with configuration options
-            python3 "$INSTALL_DIR/display-hotspot.py" "$HOTSPOT_SSID" "$HOTSPOT_PASSWORD" "192.168.4.1"
+            python3 "$INSTALL_DIR/bootstrap/display-hotspot.py" "$HOTSPOT_SSID" "$HOTSPOT_PASSWORD" "192.168.4.1"
             return 0
         fi
     done
@@ -186,7 +187,7 @@ EOF
 # Function to show configuration display
 show_config_display() {
     log "Showing configuration display..."
-    python3 "$INSTALL_DIR/display-hotspot.py" "$HOTSPOT_SSID" "$HOTSPOT_PASSWORD" "192.168.4.1"
+    python3 "$INSTALL_DIR/bootstrap/display-hotspot.py" "$HOTSPOT_SSID" "$HOTSPOT_PASSWORD" "192.168.4.1"
 }
 
 # Function to verify system health
@@ -194,7 +195,7 @@ verify_system() {
     log "Verifying system health..."
     
     # Check critical services
-    local services=("hostapd" "dnsmasq" "dhcpcd" "networking")
+    local services=("hostapd" "dnsmasq" "dhcpcd" "wpa_supplicant")
     for service in "${services[@]}"; do
         if ! systemctl is-active --quiet "$service"; then
             log "Service $service is not running, attempting to restart..."

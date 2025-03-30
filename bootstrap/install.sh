@@ -18,10 +18,11 @@ fi
 REPO_DIR="$(cd "$(dirname "$(dirname "${BASH_SOURCE[0]}")")" && pwd)"
 log "Repository directory: $REPO_DIR"
 
-# Create symlink to /opt/eink
-log "Creating symlink to /opt/eink..."
-rm -f /opt/eink
-ln -s "$REPO_DIR" /opt/eink
+# Create installation directory
+log "Creating installation directory..."
+rm -rf /opt/eink
+mkdir -p /opt/eink
+cp -r "$REPO_DIR"/* /opt/eink/
 
 # Set up Python virtual environment
 log "Setting up Python virtual environment..."
@@ -29,7 +30,7 @@ python3 -m venv /opt/eink/venv
 source /opt/eink/venv/bin/activate
 pip install -r /opt/eink/requirements.txt
 
-# Set permissions (keep user ownership)
+# Set permissions
 log "Setting permissions..."
 chmod -R 755 /opt/eink
 chmod 644 /opt/eink/requirements.txt
