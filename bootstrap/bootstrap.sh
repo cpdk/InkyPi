@@ -42,7 +42,8 @@ fi
 # Function to check internet connectivity
 check_internet() {
     log "Checking internet connectivity..."
-    if ping -c 1 8.8.8.8 >/dev/null 2>&1; then
+    # Add timeout to ping command
+    if timeout 5 ping -c 1 8.8.8.8 >/dev/null 2>&1; then
         return 0
     fi
     return 1
@@ -53,27 +54,21 @@ update_application() {
     log "Checking for application updates..."
     cd "$INSTALL_DIR"
     
-    # Get current commit
-    current_commit=$(git rev-parse HEAD)
-    
-    # Fetch and pull updates
-    git fetch origin
-    git pull origin main
-    
-    # Check if we got updates
-    if [ "$current_commit" != "$(git rev-parse HEAD)" ]; then
-        log "Updates found, installing dependencies..."
+    # Since we're copying files directly, we'll just check if the virtual environment exists
+    if [ ! -d "$INSTALL_DIR/venv" ]; then
+        log "Setting up Python virtual environment..."
+        python3 -m venv "$INSTALL_DIR/venv"
         source "$INSTALL_DIR/venv/bin/activate"
-        pip install -r requirements.txt
+        if ! timeout 300 pip install -r requirements.txt; then
+            log "Pip install timed out"
+            return 1
+        fi
         deactivate
-        
-        log "Updates installed, restarting application..."
-        systemctl restart eink.service
         return 0
     fi
     
-    log "No updates available"
-    return 1
+    log "No updates needed"
+    return 0
 }
 
 # Function to configure WiFi from yml file
@@ -194,12 +189,15 @@ show_config_display() {
 verify_system() {
     log "Verifying system health..."
     
-    # Check critical services
+    # Check critical services with timeout
     local services=("hostapd" "dnsmasq" "dhcpcd" "wpa_supplicant")
     for service in "${services[@]}"; do
         if ! systemctl is-active --quiet "$service"; then
             log "Service $service is not running, attempting to restart..."
-            systemctl restart "$service"
+            if ! timeout 10 systemctl restart "$service"; then
+                log "Service $service restart timed out"
+                continue
+            fi
             sleep 5
             if ! systemctl is-active --quiet "$service"; then
                 log "Failed to start $service"
@@ -233,9 +231,9 @@ if [ "$1" = "configure" ]; then
     exit 0
 fi
 
-# Verify system health
-if ! verify_system; then
-    log "System health check failed"
+# Verify system health with timeout
+if ! timeout 60 verify_system; then
+    log "System health check failed or timed out"
     show_config_display
     exit 1
 fi
@@ -244,20 +242,30 @@ fi
 if check_internet; then
     log "Internet connection detected"
     
-    # Check for updates
-    if update_application; then
+    # Check for updates with timeout
+    if timeout 300 update_application; then
         log "Application updated successfully"
+    else
+        log "Application update timed out or failed"
     fi
     
     # Start the application
-    systemctl start eink.service
+    if ! timeout 10 systemctl start eink.service; then
+        log "Failed to start eink service"
+        show_config_display
+        exit 1
+    fi
     exit 0
 fi
 
 # Try to configure WiFi if configuration exists
 if configure_wifi; then
     log "WiFi configured successfully"
-    systemctl start eink.service
+    if ! timeout 10 systemctl start eink.service; then
+        log "Failed to start eink service"
+        show_config_display
+        exit 1
+    fi
     exit 0
 fi
 
