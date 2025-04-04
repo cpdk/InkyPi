@@ -170,7 +170,7 @@ EOF
         if iwgetid -r >/dev/null 2>&1; then
             log "Hotspot started successfully"
             # Update display with configuration options
-            python3 "$INSTALL_DIR/bootstrap/display-hotspot.py" "$HOTSPOT_SSID" "$HOTSPOT_PASSWORD" "192.168.4.1"
+            "$INSTALL_DIR/venv/bin/python3" "$INSTALL_DIR/bootstrap/display-hotspot.py" "$HOTSPOT_SSID" "$HOTSPOT_PASSWORD" "192.168.4.1"
             return 0
         fi
     done
@@ -182,7 +182,7 @@ EOF
 # Function to show configuration display
 show_config_display() {
     log "Showing configuration display..."
-    python3 "$INSTALL_DIR/bootstrap/display-hotspot.py" "$HOTSPOT_SSID" "$HOTSPOT_PASSWORD" "192.168.4.1"
+    "$INSTALL_DIR/venv/bin/python3" "$INSTALL_DIR/bootstrap/display-hotspot.py" "$HOTSPOT_SSID" "$HOTSPOT_PASSWORD" "192.168.4.1"
 }
 
 # Function to verify system health

@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 
 from PIL import Image, ImageDraw, ImageFont
-import inky.auto
+from inky.auto import auto
 import sys
 import os
 
 def create_config_display(ssid, password, ip):
     # Initialize the display
-    display = inky.auto.auto()
+    display = auto(ask_user = True, verbose = True)
     
     # Create a new image with white background
     width = display.WIDTH
